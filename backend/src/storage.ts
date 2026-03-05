@@ -133,7 +133,7 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN patients p ON a.patient_id = p.id
       ORDER BY a.date DESC
     `);
-        return result.recordset.map((row) => ({
+        return result.recordset.map((row: any) => ({
             ...mapAppointment(row),
             patientName: row.patient_name,
         }));
@@ -149,7 +149,7 @@ export class DatabaseStorage implements IStorage {
         LEFT JOIN patients p ON a.patient_id = p.id
         ORDER BY a.date DESC
       `);
-        return result.recordset.map((row) => ({
+        return result.recordset.map((row: any) => ({
             ...mapAppointment(row),
             patientName: row.patient_name,
         }));
