@@ -1,5 +1,6 @@
 services:
   frontend:
+    image: ${FRONTEND_IMAGE:-health-analytics-frontend:latest}
     build: ./frontend
     ports:
       - "3000:80"
@@ -22,6 +23,7 @@ services:
           memory: 256M
 
   backend:
+    image: ${BACKEND_IMAGE:-health-analytics-backend:latest}
     build: ./backend
     expose:
       - "5000"

@@ -1,27 +1,96 @@
-name: Build
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
+env:
+  FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/health-analytics-frontend
+  BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/health-analytics-backend
 
 jobs:
-  build:
-    name: Build and analyze
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type Check
+        run: npm run check
+
+  build-and-push:
+    name: Build & Push to Docker Hub
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      # If you wish to fail your job when the Quality Gate is red, uncomment the
-      # following lines. This would typically be used to fail a deployment.
-      # - uses: SonarSource/sonarqube-quality-gate-action@v1
-      #   timeout-minutes: 5
-      #   env:
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}:latest,${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.FRONTEND_IMAGE }}:buildcache,mode=max
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:latest,${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.BACKEND_IMAGE }}:buildcache,mode=max
+
+  deploy:
+    name: Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Execute Remote SSH Commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /opt/health-biz-analytics
+            
+            # Export new image tags mapped to Docker Hub for docker-compose
+            export FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            export BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            
+            # Pull latest images from Docker Hub and restart services
+            docker-compose pull
+            docker-compose up -d --remove-orphans
+            
+            # Clean up old unused images
+            docker image prune -af
