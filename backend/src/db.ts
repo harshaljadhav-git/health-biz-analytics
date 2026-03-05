@@ -7,7 +7,7 @@ const config: sql.config = {
     password: process.env.DB_PASSWORD || "",
     port: parseInt(process.env.DB_PORT || "1433", 10),
     options: {
-        encrypt: false,
+        encrypt: true,
         trustServerCertificate: true,
     },
     pool: {
