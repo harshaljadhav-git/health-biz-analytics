@@ -91,7 +91,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /opt/health-biz-analytics
+            cd /home/ubuntu/health-biz-analytics
             
             # Export new image tags mapped to Docker Hub for docker-compose
             export FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
