@@ -52,29 +52,29 @@ services:
           cpus: "1.00"
           memory: 512M
 
-  # db:
-  #   image: mcr.microsoft.com/mssql/server:2022-latest
-  #   networks:
-  #     - backend_net
-  #   environment:
-  #     ACCEPT_EULA: "Y"
-  #     MSSQL_SA_PASSWORD: "Healthify@123"
-  #     MSSQL_PID: "Express"
-  #   volumes:
-  #     - mssqldata:/var/opt/mssql
-  #   healthcheck:
-  #     test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Healthify@123" -C -Q "SELECT 1" || exit 1
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 10
-  #   restart: unless-stopped
-  #   security_opt:
-  #     - no-new-privileges:true
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: "2.00"
-  #         memory: 2G
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    networks:
+      - backend_net
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Healthify@123"
+      MSSQL_PID: "Express"
+    volumes:
+      - mssqldata:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "Healthify@123" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.00"
+          memory: 2G
 
 volumes:
   mssqldata:

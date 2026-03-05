@@ -91,9 +91,18 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /home/ubuntu/health-biz-analytics
+            REPO_DIR="/home/ubuntu/health-biz-analytics"
             
-            # Export new image tags mapped to Docker Hub for docker-compose
+            # Clone repo on first deploy, pull latest on subsequent deploys
+            if [ ! -d "$REPO_DIR" ]; then
+              git clone https://github.com/${{ github.repository }}.git $REPO_DIR
+            else
+              cd $REPO_DIR && git pull origin main
+            fi
+            
+            cd $REPO_DIR
+            
+            # Set image tags and deploy
             export FRONTEND_IMAGE=${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
             export BACKEND_IMAGE=${{ env.BACKEND_IMAGE }}:${{ github.sha }}
             
